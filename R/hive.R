@@ -1,123 +1,78 @@
 
-#' Athena driver class.
+#' HiveUber driver class.
 #'
 #' @keywords internal
+#' 
 #' @export
 #' @import RJDBC
 #' @import methods
 #' @importClassesFrom RJDBC JDBCDriver
-setClass("AthenaDriver", contains = "JDBCDriver")
+setClass("HiveUberDriver", contains = "JDBCDriver")
 
-#' Athena DBI wrapper
+#' Hive Uber DBI wrapper
+#'
+#' @details 
+#' 
+#' The \code{hiveuber.subjectcreds} option sets a JVM flag necessary for kerberos 
+#' authentication. See \code{zzz.R} for details.
+#' 
 #'
 #' @export
-Athena <- function() {
-  new("AthenaDriver")
+HiveUber <- function() {
+  new("HiveUberDriver")
 }
 
-#' Constructor of AthenaDriver
+#' Constructor of HiveUberDriver
 #' 
-#' @name AthenaDriver
-#' @rdname AthenaDriver-class
-setMethod(initialize, "AthenaDriver",
+#' @name HiveUberDriver
+#' @rdname HiveUberDriver-class
+setMethod(initialize, "HiveUberDriver",
    function(.Object, ...)
 {
     # passed to parent builder, than unboxed, yuck
     # should ping RJDBC maintainers, and have them implement initialize methods instead
-    jdbc <- JDBC(driverClass="com.amazonaws.athena.jdbc.AthenaDriver",
-                 identifier.quote="'")
+    jdbc <- JDBC(driverClass="org.apache.hive.jdbc.HiveDriver",
+                 identifier.quote="`")
 
     .Object@jdrv = jdbc@jdrv
     .Object@identifier.quote = jdbc@identifier.quote
     .Object
 })
 
-#' Athena connection class.
+#' Hive Uber connection class.
 #'
-#' Class which represents the Athena connections.
+#' Class which represents the Hive Uber connections.
 #'
 #' @export
 #' @importClassesFrom RJDBC JDBCConnection
 #' @keywords internal
-setClass("AthenaConnection",
+setClass("HiveUberConnection",
   contains = "JDBCConnection",
   slots = list(
-    region = "character",
-    s3_staging_dir = "character",
-    schema_name = "character"
+    url = "character"
   )
 )
 
-#' Authentication credentials are read from the DefaultAWSCredentialsProviderChain, which includes the .aws folder and
-#' environment variables.
+#' Authentication credentials are can be specified inside the url, or kerberos can be used.
 #'
-#' @param drv An object created by \code{Athena()}
-#' @param region the AWS region
-#' @param s3_staging_dir S3 bucket where results will be saved to
-#' @param schema_name Athena schema to use
+#' @param drv An object created by \code{HiveUber()}
+#' @param url the jdbc connection url
 #' @param ... Other options
-#' @rdname Athena
-#' @seealso \href{http://docs.aws.amazon.com/athena/latest/ug/connect-with-jdbc.html#jdbc-options}{Athena Manual} for more connections options.
+#' @rdname HiveUber
+#' @seealso \href{https://cwiki.apache.org/confluence/display/Hive/HiveServer2+Clients#HiveServer2Clients-ConnectionURLs}{Hive Wiki} for more connections options.
 #' @export
 #' @examples
 #' \dontrun{
 #' require(DBI)
-#' con <- dbConnect(AWR.Athena::Athena(), region='us-west-2', 
-#'                  s3_staging_dir='s3://nfultz-athena-staging', 
-#'                  schema_name='default')
+#' con <- dbConnect(HiveUber(), url="jdbc:hive2://host:port/schema")
 #' dbListTables(con)
-#' dbGetQuery(con, "Select count(*) from sampledb.elb_logs")
+#' dbGetQuery(con, "Select count(*) from nfultz.iris")
 #' }
-setMethod("dbConnect", "AthenaDriver",
-          function(drv, region, s3_staging_dir, schema_name, ...) {
+setMethod("dbConnect", "HiveUberDriver",
+          function(drv, url, ...) {
 
-  con <- callNextMethod(drv, url=sprintf('jdbc:awsathena://athena.%s.amazonaws.com:443/', region),
-                   s3_staging_dir=s3_staging_dir,
-                   schema_name=schema_name,
-                   aws_credentials_provider_class="com.amazonaws.athena.jdbc.shaded.com.amazonaws.auth.DefaultAWSCredentialsProviderChain", ...)
+  con <- callNextMethod(drv, url=url, ...)
 
-  new("AthenaConnection", jc = con@jc, identifier.quote = drv@identifier.quote, region=region, s3_staging_dir=s3_staging_dir, schema_name=schema_name)
+  new("HiveUberConnection", jc = con@jc, identifier.quote = drv@identifier.quote, url=url)
 })
 
-#' Execute an Athena Query
-#' 
-#' @param conn An Athena Connection
-#' @param statement A SQL statement
-#' @param ... delegated to JDBC
-#'  
-#' @export
-setMethod("dbSendQuery", c("AthenaConnection", "character"), 
-          function(conn, statement, ...){
-            res <- callNextMethod(conn, statement, ...)
-            new("AthenaResult", jr = res@jr, md = res@md, pull = res@pull, stat=res@stat)
-})
-
-#' Athena Results class.
-#'
-#' Class which represents the Athena results
-#'
-#' @export
-#' @importClassesFrom RJDBC JDBCResult
-#' @keywords internal
-setClass("AthenaResult",
-         contains = "JDBCResult"
-)
-
-
-#' Fetch Athena Results
-#' 
-#' @param res an AthenaResult
-#' @param n -1 for all, or how many records to fetch
-#' @param ... delegated to JDBC
-#' 
-#' @export
-setMethod("fetch", c("AthenaResult", "numeric"),
-          function(res, n = -1, ...) {
-            # Note that Athena has restrictions on how many results to return,
-            # which may manifest as  the following error:
-            # Error in .jcall(rp, "I", "fetch", stride, block) : 
-            # java.sql.SQLException: The requested fetchSize is more than the allowed value in Athena. 
-            # Please reduce the fetchSize and try again. Refer to the Athena documentation for valid fetchSize values.
-
-            res <- callNextMethod(res, n, block = 999, ...)
-          })

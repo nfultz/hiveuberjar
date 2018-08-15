@@ -1,16 +1,16 @@
-Package: AWR.Athena
+Package: hiveuberjar
 Type: Package
-Title: 'AWS' Athena 'DBI' Wrapper 
+Title: Hive 'DBI' Wrapper 
 Version: 1.1.0-1
-Author: Neal Fultz <nfultz@gmail.com>, Gergely Daróczi <gergely@system1.com>
+Author: Tim Veil <tjveil@gmail.com> [aut], Neal Fultz <nfultz@gmail.com> [cre]
 Maintainer: Neal Fultz <nfultz@gmail.com>
-Description: 'RJDBC' based 'DBI' driver to Amazon Athena, which is an interactive
-    query service to analyze data in Amazon 'S3' using standard 'SQL'.
-License: AGPL-3
+Description: 'RJDBC' based 'DBI' driver to Hive, which is a data warehouse
+  built on top of 'Hadoop'. 'Kerberos' authentication is supported.
+License: Apache License 2.0
 Encoding: UTF-8
 LazyData: true
 Imports:
   methods,
   RJDBC,
   rJava
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.0
