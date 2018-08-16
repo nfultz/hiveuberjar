@@ -25,7 +25,7 @@ This provides a simplified DBI driver for Hive:
 require(DBI)
 con <- dbConnect(hiveuberjar::HiveUber(), url="jdbc://host:port/schema")
 dbListTables(con)
-dbGetQuery(con, "Select *count(*) from sampledb.elb_logs* from nfultz.iris limit 10")
+dbGetQuery(con, "Select *count(*) from nfultz.iris limit 10")
 ```
 
 Installing and loading the JDBC driver package is handled automatically. Authentication via kerberos is also supported.
